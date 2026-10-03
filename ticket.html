@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A2A29">
+<title>Your Q&amp;A Ticket</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --charcoal: #2A2A29; --cream: #EAE8DC; --teal: #6E98A3; --ink: #1E1E1D; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background-color: var(--charcoal);
+    background-image: radial-gradient(rgba(234,232,220,.08) 1px, transparent 1px);
+    background-size: 12px 12px;
+    color: var(--cream);
+    font: 400 15px/1.55 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+    -webkit-font-smoothing: antialiased;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 440px; margin: 0 auto; padding: 28px 20px 40px; }
+  h1 { margin: 0 0 6px; font: 900 34px/1 'Archivo', Impact, sans-serif; font-stretch: 125%; text-transform: uppercase; }
+  .sub { color: var(--teal); margin: 0 0 22px; }
+  .ticket { background: var(--cream); color: var(--ink); border-radius: 4px; padding: 22px 20px; text-align: center; }
+  .ticket img { width: 100%; max-width: 280px; height: auto; display: block; margin: 0 auto; image-rendering: pixelated; }
+  .tid { font-weight: 600; letter-spacing: .08em; margin: 14px 0 2px; font-size: 17px; }
+  .seats { margin: 0; }
+  .details { margin: 22px 0 0; }
+  .details p { margin: 0 0 12px; }
+  .event { font: 900 18px/1.15 'Archivo', Impact, sans-serif; font-stretch: 125%; text-transform: uppercase; margin-bottom: 4px; }
+  .spin { width: 28px; height: 28px; border: 3px solid rgba(234,232,220,.25); border-top-color: var(--cream); border-radius: 50%; animation: s 1s linear infinite; margin: 30px 0; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <h1>Payment received.</h1>
+  <p class="sub">Getting your ticket…</p>
+  <div class="spin" aria-hidden="true"></div>
+</div>
+
+<script>
+/* Same Apps Script /exec URL as the scanner (index.html) */
+var API_URL = 'https://script.google.com/macros/s/AKfycbwV7R5P-oJet_plff_UCVUbVqZ-9J3rxFT_lEqVCigZ-vfC3VlRdjqAnW7xLVimcZlahg/exec';
+
+var app = document.getElementById('app');
+var session = (location.search.match(/[?&]session=([^&]+)/) || [])[1] || '';
+var tries = 0;
+
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function load() {
+  tries++;
+  fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'confirm', session: decodeURIComponent(session) }) })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (res.status === 'ok') return showTicket(res.ticket, res.event);
+      if (tries < 4) return setTimeout(load, 3000);   // Stripe can take a moment to finalize
+      showPending(res.event);
+    })
+    .catch(function () {
+      if (tries < 4) return setTimeout(load, 3000);
+      showPending(null);
+    });
+}
+
+function showTicket(t, ev) {
+  app.innerHTML = '';
+  app.appendChild(el('h1', null, 'You\'re in, ' + t.first + '.'));
+  app.appendChild(el('p', 'sub', 'Show this code at the door. Turn your screen brightness up.'));
+
+  var card = el('div', 'ticket');
+  var img = el('img'); img.src = t.qr; img.alt = 'Your Q&A ticket QR code'; img.width = 280; img.height = 280;
+  card.appendChild(img);
+  card.appendChild(el('p', 'tid', t.id));
+  card.appendChild(el('p', 'seats', t.name + ' · ' + (t.seats === 1 ? '1 seat' : t.seats + ' seats')));
+  app.appendChild(card);
+
+  var d = el('div', 'details');
+  d.appendChild(el('p', 'event', ev.title));
+  var w = el('p'); w.appendChild(document.createTextNode(ev.when)); w.appendChild(el('br')); w.appendChild(document.createTextNode(ev.where));
+  d.appendChild(w);
+  if (t.seats > 1) d.appendChild(el('p', null, 'This one code admits all ' + t.seats + ' men. Share a screenshot with your group if you\'re arriving separately.'));
+  d.appendChild(el('p', null, 'We also emailed this ticket to ' + t.email + '. Take a screenshot of this screen to be safe.'));
+  app.appendChild(d);
+}
+
+function showPending(ev) {
+  app.innerHTML = '';
+  app.appendChild(el('h1', null, 'Payment received.'));
+  app.appendChild(el('p', 'sub', 'Your ticket is on its way.'));
+  var d = el('div', 'details');
+  d.appendChild(el('p', null, 'Your QR code will arrive by email within a few minutes. If you\'re at the conference now, a volunteer at the door can also look you up by name.'));
+  d.appendChild(el('p', null, 'Questions? Email ' + ((ev && ev.contact) || 'hello@primalpath.co') + '.'));
+  app.appendChild(d);
+}
+
+if (session) load(); else showPending(null);
+</script>
+</body>
+</html>
