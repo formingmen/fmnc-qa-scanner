@@ -83,8 +83,13 @@ function showTicket(t, ev) {
   d.appendChild(el('p', 'event', ev.title));
   var w = el('p'); w.appendChild(document.createTextNode(ev.when)); w.appendChild(el('br')); w.appendChild(document.createTextNode(ev.where));
   d.appendChild(w);
-  if (t.seats > 1) d.appendChild(el('p', null, 'This one code admits all ' + t.seats + ' men. Share a screenshot with your group if you\'re arriving separately.'));
+  if (t.seats > 1) d.appendChild(el('p', null, 'This one code admits ' + (t.seats === 2 ? 'both men' : 'all ' + t.seats + ' men') + '. Share a screenshot with your group if you\'re arriving separately.'));
   d.appendChild(el('p', null, 'We also emailed this ticket to ' + t.email + '. Take a screenshot of this screen to be safe.'));
+  var q = el('p'); q.appendChild(document.createTextNode('Have a question for Jon and Jeff? '));
+  var a = el('a', null, 'Submit it ahead of time'); a.href = 'https://forms.gle/Be5KJtKAnoZbLDi87'; a.target = '_blank'; a.rel = 'noopener';
+  a.style.color = '#EAE8DC'; a.style.fontWeight = '600';
+  q.appendChild(a); q.appendChild(document.createTextNode(', anonymously if you\'d like.'));
+  d.appendChild(q);
   app.appendChild(d);
 }
 
